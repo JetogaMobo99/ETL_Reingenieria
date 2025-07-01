@@ -96,7 +96,9 @@ def etl_dim_promos():
 
 
 
-if __name__ == "__main__":
+def main():
+    """Main function to execute the ETL process for promotions.
+    """
     logger.info("Ejecutando ETL para promociones")
     etl_dim_promos()
     logger.info("ETL para promociones ejecutado con éxito")

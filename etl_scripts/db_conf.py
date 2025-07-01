@@ -48,6 +48,12 @@ class DatabaseConfig:
         )
 
     @classmethod
+    def get_hana_connection_string(cls):
+        """Cadena de conexión para SAP HANA"""
+        return f"Driver=HDBODBC;ServerNode={os.getenv('HANA_HOST')}:{os.getenv('HANA_PORT', '30015')};UID={os.getenv('HANA_USER')};PWD={os.getenv('HANA_PASSWORD')};"
+
+
+    @classmethod
     def get_sql_connection_string(cls):
         """Connection string dinámico"""
         config = cls.get_sql_config()
