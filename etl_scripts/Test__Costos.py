@@ -17,10 +17,193 @@ fecha_inicio = fecha_inicio.strftime('%d.%m.%Y')
 
 
 
-query_historico = f"""
-   SELECT "U_SYS_MFEC", "U_SYS_MCOD", "U_SYS_MCAN", "U_SYS_MVAL", "U_SYS_MPRO"
-    FROM "MOBO_PRODUCTIVO"."@SYS_COSTOPROMHIST"
-    WHERE "U_SYS_MFEC" between '{fecha_inicio}' and '{fecha_ayer}'
+query_historico = f"""WITH 
+
+-- Generador de fechas del 22.06.2025 al 01.07.2025 (10 días)
+NUMEROS AS (
+  SELECT 0 AS n FROM DUMMY
+  UNION ALL SELECT 1 FROM DUMMY
+  UNION ALL SELECT 2 FROM DUMMY
+  UNION ALL SELECT 3 FROM DUMMY
+  UNION ALL SELECT 4 FROM DUMMY
+  UNION ALL SELECT 5 FROM DUMMY
+  UNION ALL SELECT 6 FROM DUMMY
+  UNION ALL SELECT 7 FROM DUMMY
+  UNION ALL SELECT 8 FROM DUMMY
+  UNION ALL SELECT 9 FROM DUMMY
+),
+FECHAS_RANGO AS (
+  SELECT ADD_DAYS(TO_DATE('22.06.2025', 'DD.MM.YYYY'), UNIS.n + DECS.n * 10) AS FECHA
+  FROM NUMEROS UNIS
+  CROSS JOIN NUMEROS DECS
+  WHERE ADD_DAYS(TO_DATE('22.06.2025', 'DD.MM.YYYY'), UNIS.n + DECS.n * 10) <= TO_DATE('01.07.2025', 'DD.MM.YYYY')
+),
+
+-- Productos activos
+PRODUCTOS_ACTIVOS AS (
+  SELECT O."ItemCode", O."ItemName", O."InvntItem", O."U_SYS_ATPR", 
+         O."U_SYS_ARPV", O."U_SYS_CORE", O."U_SYS_FACTTP", O."FirmCode", O."ItmsGrpCod"
+  FROM "MOBO_PRODUCTIVO"."OITM" O
+  WHERE O."frozenFor" = 'N' OR O."frozenFor" IS NULL
+),
+
+-- Información extendida del producto
+INFO_PRODUCTOS AS (
+  SELECT 
+      P."ItemCode", P."ItemName", P."InvntItem", P."U_SYS_ATPR", 
+      P."U_SYS_ARPV", P."U_SYS_CORE", P."U_SYS_FACTTP",
+      COALESCE(L."Code", 'SIN_LINEA') AS "Linea",
+      G."ItmsGrpNam",
+      F."FirmName"
+  FROM PRODUCTOS_ACTIVOS P
+  LEFT JOIN "MOBO_PRODUCTIVO"."@SYS_CLINEA" L ON (P."ItmsGrpCod" = L."U_SYS_GRUP" AND P."FirmCode" = L."U_SYS_FABR")
+  INNER JOIN "MOBO_PRODUCTIVO"."OMRC" F ON (F."FirmCode" = P."FirmCode")
+  INNER JOIN "MOBO_PRODUCTIVO"."OITB" G ON (G."ItmsGrpCod" = P."ItmsGrpCod")
+),
+
+-- Todos los pares producto-fecha
+PRODUCTO_FECHA AS (
+  SELECT F.FECHA, P.*
+  FROM FECHAS_RANGO F
+  CROSS JOIN INFO_PRODUCTOS P
+),
+
+-- Transacciones válidas resumidas por fecha
+TRANSACCIONES_DIARIAS AS (
+  SELECT 
+    H."ItemCode", 
+    H."CreateDate",
+    SUM(H."InQty" - H."OutQty") AS "Cantidad",
+    SUM(H."TransValue") AS "Valor",
+    MAX(H."CalcPrice") AS "CalcPrice"
+  FROM "MOBO_PRODUCTIVO"."OINM" H
+  WHERE H."TransType" <> 18 AND H."CalcPrice" <> 0
+    AND H."CreateDate" BETWEEN TO_DATE('22.06.2025', 'DD.MM.YYYY') AND TO_DATE('01.07.2025', 'DD.MM.YYYY')
+  GROUP BY H."ItemCode", H."CreateDate"
+),
+
+-- Costos promedio detallados
+COSTOS_PROMEDIO AS (
+  SELECT 
+    CP."U_SYS_CODA" AS "ItemCode",
+    CP."U_SYS_FECH" AS "FechaCosto",
+    CP."U_SYS_CAVG" AS "CostoPromedio",
+    
+    CASE 
+      WHEN CP."U_SYS_TIPO" = '162' THEN 0
+      WHEN CP."U_SYS_TIPO" = '0' THEN CP."U_SYS_IACT"
+      ELSE CP."U_SYS_CANT"
+    END AS "Cantidad",
+    
+    CASE
+      WHEN CP."U_SYS_TIPO" = '0' THEN CP."U_SYS_CACT"
+      WHEN CP."U_SYS_TIPO" = 18 AND CP."U_SYS_CANT" = 0 AND CP."U_SYS_CAVG" <> 0 THEN CP."U_SYS_CAVG"
+      WHEN CP."U_SYS_TIPO" NOT IN ('162', '69') THEN CP."U_SYS_CANT" * CP."U_SYS_CAVG"
+      ELSE COALESCE(NULLIF(CP."U_SYS_CANT", 0) * CP."U_SYS_CAVG", CP."U_SYS_CAVG")
+    END AS "Valor"
+
+  FROM "MOBO_PRODUCTIVO"."@SYS_COSTOPROMEDIO" CP
+  WHERE CP."U_SYS_PROC" = 'Y' 
+    AND CP."U_SYS_FECH" <= TO_DATE('01.07.2025', 'DD.MM.YYYY')
+    AND CP."U_SYS_CAVG" <> 0
+),
+
+
+-- Costos promedio más recientes por producto y día
+COSTO_ULTIMO AS (
+  SELECT 
+    PF.FECHA,
+    PF."ItemCode",
+    CP."CostoPromedio",
+    CP."Cantidad",
+    CP."Valor",
+    ROW_NUMBER() OVER (
+      PARTITION BY PF."ItemCode", PF.FECHA
+      ORDER BY CP."FechaCosto" DESC
+    ) AS rn
+  FROM PRODUCTO_FECHA PF
+  LEFT JOIN COSTOS_PROMEDIO CP 
+    ON CP."ItemCode" = PF."ItemCode" AND CP."FechaCosto" <= PF.FECHA
+),
+
+
+-- Histórico
+COSTOS_HIST AS (
+  SELECT 
+    H."U_SYS_MFEC" AS "Fecha",
+    H."U_SYS_MCOD" AS "ItemCode",
+    H."U_SYS_MCAN" AS "Cantidad",
+    H."U_SYS_MVAL" AS "Valor",
+    H."U_SYS_MPRO" AS "Costo"
+  FROM "MOBO_PRODUCTIVO"."@SYS_COSTOPROMHIST" H
+  WHERE H."U_SYS_MFEC" BETWEEN TO_DATE('22.06.2025', 'DD.MM.YYYY') AND TO_DATE('01.07.2025', 'DD.MM.YYYY')
+),
+
+-- Consolidado final
+CONSOLIDADO_FINAL AS (
+  SELECT 
+    PF.FECHA,
+    PF."ItemCode",
+    PF."ItemName",
+    PF."Linea",
+    PF."ItmsGrpNam",
+    PF."FirmName",
+    
+    -- Cantidad
+    CASE 
+      WHEN PF."InvntItem" = 'N' THEN 0
+      ELSE COALESCE(H."Cantidad", T."Cantidad", CU."Cantidad", 0)
+    END AS "Cantidad_Acomulada",
+    
+    -- Valor
+    CASE 
+      WHEN PF."InvntItem" = 'N' THEN 0
+      WHEN PF."U_SYS_ATPR" = 'Y' THEN
+        COALESCE(H."Valor", 
+                 CASE 
+                   WHEN PF."U_SYS_ARPV" = 'N' THEN PF."U_SYS_CORE" * COALESCE(T."Cantidad", CU."Cantidad", 0)
+                   ELSE PF."U_SYS_CORE" * (PF."U_SYS_FACTTP" / 100.0) * COALESCE(T."Cantidad", CU."Cantidad", 0)
+                 END)
+      ELSE COALESCE(H."Valor", T."Valor", CU."Valor", 0)
+    END AS "Valor_Acomulado",
+    
+    -- Costo promedio
+    CASE 
+      WHEN PF."InvntItem" = 'N' THEN COALESCE(H."Costo", PF."U_SYS_CORE", 0)
+      WHEN PF."U_SYS_ATPR" = 'Y' THEN
+        COALESCE(H."Costo", 
+                 CASE 
+                   WHEN PF."U_SYS_ARPV" = 'N' THEN PF."U_SYS_CORE"
+                   ELSE PF."U_SYS_CORE" * (PF."U_SYS_FACTTP" / 100.0)
+                 END)
+      ELSE COALESCE(H."Costo", 
+                    CASE WHEN T."Cantidad" = 0 THEN NULL ELSE T."Valor" / T."Cantidad" END,
+                    CU."CostoPromedio", PF."U_SYS_CORE", 0)
+    END AS "Costo_Promedio"
+    
+  FROM PRODUCTO_FECHA PF
+  LEFT JOIN TRANSACCIONES_DIARIAS T ON T."ItemCode" = PF."ItemCode" AND T."CreateDate" = PF.FECHA
+  LEFT JOIN COSTOS_HIST H ON H."ItemCode" = PF."ItemCode" AND H."Fecha" = PF.FECHA
+  LEFT JOIN COSTO_ULTIMO CU ON CU."ItemCode" = PF."ItemCode" AND CU.FECHA = PF.FECHA AND CU.rn = 1
+)
+
+-- Resultado final
+SELECT 
+  FECHA AS "FECHA_COSTO",
+  '' AS "TransNum",
+  "ItemCode" AS "ARTICULO",
+  "ItemName" AS "NOM_ARTICULO",
+  "Cantidad_Acomulada",
+  "Valor_Acomulado",
+  0 AS "MONTO",
+  "Costo_Promedio",
+  "Linea",
+  "ItmsGrpNam",
+  "FirmName"
+FROM CONSOLIDADO_FINAL
+--WHERE "Costo_Promedio" > 0
+ORDER BY FECHA, "ItemCode";
+
 """
 
 
@@ -162,19 +345,27 @@ query_articuloscosto=f"""
 
 hanna_conn = DatabaseConfig.get_hana_config()
 
-
+print("Conectando a SAP HANA para obtener datos de costos...")
+# Process queries one at a time to reduce memory usage
 hanna_historico = pd.read_sql(query_historico, hanna_conn)
 
-hanna_articulocostoventas = pd.read_sql(query_articulocostoventas, hanna_conn)
-hanna_anteriores = pd.read_sql(query_anteriores, hanna_conn)
-hanna_tabla1 = pd.read_sql(query_tabla1, hanna_conn)
-hanna_tabla2 = pd.read_sql(query_tabla2, hanna_conn)
-hanna_tabla3 = pd.read_sql(query_tabla3, hanna_conn)
-hanna_tabla4 = pd.read_sql(query_tabla4, hanna_conn)
+hanna_historico["FECHA_COSTO"] = pd.to_datetime(hanna_historico["FECHA_COSTO"], format='%d.%m.%Y').strftime('%Y%m%d')
 
+sql_con = DatabaseConfig.get_conn_sql()
+
+sql_historico= """
+select * from stage_costos
+where Fecha between 20250622 and 20250701
+"""
+
+
+sql_historico = pd.read_sql(sql_historico, sql_con)
+
+hanna_historico.groupby(['FECHA_COSTO']).size().sort_values(ascending=False).head(10)
 
 time = pd.Timestamp.now() - time
 print(f"Tiempo de ejecución: {time}")
 import pdb
+import gc
 pdb.set_trace()
 
