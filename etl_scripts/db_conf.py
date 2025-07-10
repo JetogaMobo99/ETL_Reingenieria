@@ -22,7 +22,7 @@ class DatabaseConfig:
     @classmethod
     def get_sql_config(cls):
         """Retorna configuración SQL según ambiente"""
-        if cls.ENVIRONMENT == 'production':
+        if cls.ENVIRONMENT == 'prod':
             return {
                 'server': os.getenv('SQL_SERVER'),
                 'database': os.getenv('SQL_DATABASE'),

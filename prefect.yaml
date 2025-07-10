@@ -1,0 +1,48 @@
+# Welcome to your prefect.yaml file! You can use this file for storing and managing
+# configuration for deploying your flows. We recommend committing this file to source
+# control along with your flow code.
+
+# Generic metadata about this project
+name: ETL_Reingenieria
+prefect-version: 3.4.6
+
+# build section allows you to manage and build docker images
+build: null
+
+# push section allows you to manage if and how this project is uploaded to remote locations
+push: null
+
+# pull section allows you to provide instructions for cloning this project in remote locations
+pull:
+- prefect.deployments.steps.git_clone:
+    repository: https://github.com/JetogaMobo99/ETL_Reingenieria.git
+    branch: main
+    access_token: "{{ $PREFECT_GITHUB_ACCESS_TOKEN }}"
+
+# the deployments section allows you to provide configuration for deploying flows
+deployments:
+- name: TestingEnv
+  version: null
+  tags: []
+  concurrency_limit: null
+  description: Obtiene el entorno actual desde las variables de entorno
+  entrypoint: EnviormentTest:get_environment_flow
+  parameters: {}
+  work_pool:
+    name: prod-pool
+    work_queue_name: null
+    job_variables: {}
+  schedules: []
+
+- name: TestingEnvDev
+  version: null
+  tags: []
+  concurrency_limit: null
+  description: Obtiene el entorno actual desde las variables de entorno
+  entrypoint: EnviormentTest:get_environment_flow
+  parameters: {}
+  work_pool:
+    name: dev-pool
+    work_queue_name: null
+    job_variables: {}
+  schedules: []

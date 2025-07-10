@@ -80,37 +80,52 @@ def extract_costos_for_date(fecha):
 @task
 def get_hana_costos_parallel():
     """
-    Extrae datos de costos desde SAP HANA de forma paralela por fechas.
+    Extrae datos de costos desde SAP HANA de forma paralela por fechas en bloques de 4 días.
     
     Returns:
         bool: True si se obtuvieron datos exitosamente, False en caso contrario
     """
-    logger.info("Iniciando extracción paralela de datos de costos desde SAP HANA")
+    logger.info("Iniciando extracción paralela de datos de costos desde SAP HANA en bloques de 4 días")
     
     today = pd.Timestamp.now()
-    fechas = [today - pd.DateOffset(days=i) for i in range(1, 4)]
+    fechas = [today - pd.DateOffset(days=i) for i in range(1, 11)]
     
-    # Ejecutar extracciones en paralelo usando submit()
-    extraction_futures = []
-    for fecha in fechas:
-        future = extract_costos_for_date.submit(fecha)
-        extraction_futures.append(future)
+    # Dividir las fechas en bloques de 4
+    bloques = [fechas[i:i+4] for i in range(0, len(fechas), 4)]
     
-    # Recopilar resultados
-    resultados = []
-    for future in extraction_futures:
-        resultado = future.result()
-        resultados.append(resultado)
+    todos_los_resultados = []
     
-    # Evaluar resultados
-    extracciones_exitosas = sum(1 for r in resultados if r['exitoso'])
-    total_registros = sum(r['registros'] for r in resultados)
+    for bloque_num, bloque_fechas in enumerate(bloques, 1):
+        logger.info(f"Procesando bloque {bloque_num}/{len(bloques)} con {len(bloque_fechas)} fechas")
+        
+        # Ejecutar extracciones en paralelo para el bloque actual
+        extraction_futures = []
+        for fecha in bloque_fechas:
+            future = extract_costos_for_date.submit(fecha)
+            extraction_futures.append(future)
+        
+        # Recopilar resultados del bloque
+        resultados_bloque = []
+        for future in extraction_futures:
+            resultado = future.result()
+            resultados_bloque.append(resultado)
+        
+        todos_los_resultados.extend(resultados_bloque)
+        
+        # Log del progreso del bloque
+        exitosas_bloque = sum(1 for r in resultados_bloque if r['exitoso'])
+        registros_bloque = sum(r['registros'] for r in resultados_bloque)
+        logger.info(f"Bloque {bloque_num} completado: {exitosas_bloque}/{len(bloque_fechas)} extracciones exitosas, {registros_bloque} registros")
+    
+    # Evaluar resultados totales
+    extracciones_exitosas = sum(1 for r in todos_los_resultados if r['exitoso'])
+    total_registros = sum(r['registros'] for r in todos_los_resultados)
     
     logger.info(f"Extracciones completadas: {extracciones_exitosas}/{len(fechas)}")
     logger.info(f"Total de registros extraídos: {total_registros}")
     
     # Log detallado de cada resultado
-    for resultado in resultados:
+    for resultado in todos_los_resultados:
         if resultado['exitoso']:
             logger.info(f"✓ Fecha {resultado['fecha']}: {resultado['registros']} registros en {resultado['archivo']}")
         else:
@@ -119,7 +134,7 @@ def get_hana_costos_parallel():
     
     # Retornar True si se obtuvieron al menos 2 extracciones exitosas
     if extracciones_exitosas >= 2:
-        logger.info("Extracción paralela completada exitosamente")
+        logger.info("Extracción paralela en bloques completada exitosamente")
         return True
     else:
         logger.warning("No se obtuvieron suficientes datos de las extracciones")
