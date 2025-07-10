@@ -14,10 +14,17 @@ import pyodbc
 # Cargar variables de entorno
 load_dotenv(find_dotenv())
 
+
+TEST=True
+
+if TEST:
+    os.environ['ENVIRONMENT'] = 'dev'
+
+
 class DatabaseConfig:
     """Configuración dinámica de base de datos según ambiente"""
     
-    ENVIRONMENT = os.getenv('ENVIRONMENT', 'development').lower()
+    ENVIRONMENT = os.getenv('ENVIRONMENT', 'dev').lower()
     
     @classmethod
     def get_sql_config(cls):

@@ -23,7 +23,7 @@ pull:
 deployments:
 - name: TestingEnv
   version: null
-  tags: []
+  tags: [prod]
   concurrency_limit: null
   description: Obtiene el entorno actual desde las variables de entorno
   entrypoint: EnviormentTest:get_environment_flow
@@ -36,7 +36,7 @@ deployments:
 
 - name: TestingEnvDev
   version: null
-  tags: []
+  tags: [dev]
   concurrency_limit: null
   description: Obtiene el entorno actual desde las variables de entorno
   entrypoint: EnviormentTest:get_environment_flow
