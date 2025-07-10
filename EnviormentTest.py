@@ -3,7 +3,12 @@ from prefect import flow, task
 from dotenv import load_dotenv, find_dotenv
 load_dotenv(find_dotenv())
 
+TEST=True
 
+if TEST:
+    os.environ['ENVIRONMENT'] = 'dev'
+
+    
 @flow(name="get_environment_flow", log_prints=True)
 def get_environment_flow():
     """Obtiene el entorno actual desde las variables de entorno"""
