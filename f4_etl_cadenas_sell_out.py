@@ -1,7 +1,9 @@
+
+
 from prefect import flow, task
 from prefect.logging import get_run_logger
 from etl_scripts import *
-from etl_scripts.etl_cadenas_sell_out import etl_cadenas_sell_out
+from etl_scripts.f4_etl_cadenas_sell_out import etl_cadenas_sell_out
 from prefect.context import get_run_context
 from utils import *
 
@@ -19,4 +21,4 @@ def etl_cadenas_sell_out_flow():
     etl_cadenas_sellout()
 
 if __name__ == "__main__":
-    etl_cadenas_sell_out_flow.serve(name="etl_cadenas_sell_out")
+    etl_cadenas_sell_out_flow()

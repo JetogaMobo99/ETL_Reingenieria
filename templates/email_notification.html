@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prefect Flow Notification</title>
+    <!--[if mso]>
+    <noscript>
+        <xml>
+            <o:OfficeDocumentSettings>
+                <o:PixelsPerInch>96</o:PixelsPerInch>
+            </o:OfficeDocumentSettings>
+        </xml>
+    </noscript>
+    <![endif]-->
+    <style type="text/css">
+        /* Reset styles */
+        body, table, td, p, a, li, blockquote {
+            -webkit-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
+        }
+        
+        table, td {
+            border-collapse: collapse;
+        }
+        
+        img {
+            -ms-interpolation-mode: bicubic;
+            border: 0;
+            height: auto;
+            line-height: 100%;
+            outline: none;
+            text-decoration: none;
+        }
+        
+        /* Main styles */
+        body {
+            margin: 0 !important;
+            padding: 0 !important;
+            background-color: #f4f4f4;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #333333;
+        }
+        
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            text-align: center;
+            align-items: center;
+        }
+        
+        .header-table {
+            background-color: #1e3a8a;
+            background-image: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+        }
+        
+        .header-content {
+            padding: 30px 20px;
+            text-align: center;
+            color: #ffffff;
+        }
+        
+        .header-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 0;
+            padding: 10px 0;
+        }
+        
+        .header-emoji {
+            font-size: 32px;
+            display: block;
+            margin-bottom: 10px;
+        }
+        
+        .status-table {
+            margin: 20px;
+        }
+        
+        .status-success {
+            background-color: #10b981;
+            color: #ffffff;
+        }
+        
+        .status-failure {
+            background-color: #ef4444;
+            color: #ffffff;
+        }
+        
+        .status-running {
+            background-color: #f59e0b;
+            color: #ffffff;
+        }
+        
+        .status-content {
+            padding: 20px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 16px;
+            border-radius: 8px;
+        }
+        
+        .card-table {
+            margin: 20px;
+            background-color: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+        }
+        
+        .card-header {
+            background-color: #f9fafb;
+            padding: 15px 20px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .card-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #1f2937;
+            margin: 0;
+        }
+        
+        .card-content {
+            padding: 20px;
+        }
+        
+        .detail-row {
+            border-bottom: 1px solid #f3f4f6;
+            padding: 12px 0;
+        }
+        
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+        
+        .detail-label {
+            font-weight: bold;
+            color: #6b7280;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: block;
+            margin-bottom: 4px;
+        }
+        
+        .detail-value {
+            color: #1f2937;
+            font-weight: 500;
+            word-break: break-word;
+        }
+        
+        .duration-highlight {
+            color: #10b981;
+            font-weight: bold;
+        }
+        
+        .ui-button {
+            background-color: #3b82f6;
+            color: #ffffff;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: bold;
+            display: inline-block;
+            margin-top: 15px;
+        }
+        
+        .ui-button:hover {
+            background-color: #2563eb;
+            color: #ffffff;
+            text-decoration: none;
+        }
+        
+        .footer-table {
+            background-color: #f9fafb;
+            border-top: 1px solid #e5e7eb;
+        }
+        
+        .footer-content {
+            padding: 25px 20px;
+            text-align: center;
+            color: #6b7280;
+            font-size: 12px;
+        }
+        
+        .badge {
+            background-color: #3b82f6;
+            color: #ffffff;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+            display: inline-block;
+            margin-top: 8px;
+        }
+        
+        /* Mobile responsive */
+        @media only screen and (max-width: 600px) {
+            .email-container {
+                width: 100% !important;
+            }
+            
+            .header-title {
+                font-size: 20px !important;
+            }
+            
+            .header-emoji {
+                font-size: 28px !important;
+            }
+            
+            .card-table,
+            .status-table {
+                margin: 10px !important;
+            }
+            
+            .header-content,
+            .card-content {
+                padding: 15px !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div style="background-color: #f4f4f4; padding: 20px 0;">
+        <table class="email-container" cellpadding="0" cellspacing="0" border="0" role="presentation">
+            <!-- Header -->
+            <tr>
+                <td class="header-table">
+                    <div class="header-content">
+                        <span class="header-emoji">⚡</span>
+                        <h1 class="header-title">Prefect Flow Notification</h1>
+                        <div class="badge">Automated Alert</div>
+                    </div>
+                </td>
+            </tr>
+            
+            <!-- Status -->
+            <tr>
+                <td>
+                    <table class="status-table" cellpadding="0" cellspacing="0" border="0" role="presentation" width="100%">
+                        <tr>
+                            <td class="status-content {{ 'status-success' if state.name == 'Completed' else ('status-failure' if state.name == 'Failed' else 'status-running') }}">
+                                <div style="font-size: 20px; margin-bottom: 8px;">
+                                    {% if state.name == 'Completed' %}✅
+                                    {% elif state.name == 'Failed' %}❌
+                                    {% else %}⏳{% endif %}
+                                </div>
+                                Flow Status: {{ state.name.upper() }}
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+            
+            <!-- Flow Details -->
+            <tr>
+                <td>
+                    <table class="card-table" cellpadding="0" cellspacing="0" border="0" role="presentation" width="100%">
+                        <tr>
+                            <td class="card-header">
+                                <h3 class="card-title">📋 Flow Information</h3>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="card-content">
+                                <div class="detail-row">
+                                    <span class="detail-label">Flow Name</span>
+                                    <div class="detail-value">{{ flow_run.name }}</div>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Flow ID</span>
+                                    <div class="detail-value">{{ flow_run.flow_id }}</div>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Deployment ID</span>
+                                    <div class="detail-value">{{ flow_run.deployment_id }}</div>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Work Pool</span>
+                                    <div class="detail-value">{{ flow_run.work_pool_name }}</div>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Work Queue</span>
+                                    <div class="detail-value">{{ flow_run.work_queue_name }}</div>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Scheduled Start</span>
+                                    <div class="detail-value">{{ flow_run.expected_start_time.strftime('%Y-%m-%d %H:%M:%S UTC') if flow_run.expected_start_time else 'N/A' }}</div>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Actual Start</span>
+                                    <div class="detail-value">{{ flow_run.start_time.strftime('%Y-%m-%d %H:%M:%S UTC') if flow_run.start_time else 'N/A' }}</div>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">End Time</span>
+                                    <div class="detail-value">
+                                        {% if flow_run.start_time and flow_run.total_run_time %}
+                                            {{ (flow_run.start_time + flow_run.total_run_time).strftime('%Y-%m-%d %H:%M:%S UTC') }}
+                                        {% elif flow_run.end_time %}
+                                            {{ flow_run.end_time.strftime('%Y-%m-%d %H:%M:%S UTC') }}
+                                        {% else %}
+                                            Running...
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Total Execution Time</span>
+                                    <div class="detail-value duration-highlight">
+                                        {% if flow_run.total_run_time %}
+                                            {{ (flow_run.total_run_time.total_seconds() // 60) | int }}:{{ "{:02d}".format((flow_run.total_run_time.total_seconds() % 60) | int) }}
+                                        {% else %}
+                                            N/A
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Run Count</span>
+                                    <div class="detail-value">#{{ flow_run.run_count }}</div>
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+            
+            <!-- UI Link -->
+            <tr>
+                <td>
+                    <table class="card-table" cellpadding="0" cellspacing="0" border="0" role="presentation" width="100%">
+                        <tr>
+                            <td class="card-header">
+                                <h3 class="card-title">🔗 Flow Run Details</h3>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="card-content" style="text-align: center;">
+                                <p style="margin: 0 0 15px 0; color: #6b7280;">
+                                    View the complete flow run details in the Prefect UI.
+                                </p>
+                                <a href="{{ PREFECT_API_URL }}/flow-run/{{ flow_run.id }}" class="ui-button">
+                                    🖥️ View in Prefect UI
+                                </a>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+            
+            <!-- Environment Details -->
+            <tr>
+                <td>
+                    <table class="card-table" cellpadding="0" cellspacing="0" border="0" role="presentation" width="100%">
+                        <tr>
+                            <td class="card-header">
+                                <h3 class="card-title">🌐 Environment Details</h3>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="card-content">
+                                <div class="detail-row">
+                                    <span class="detail-label">Flow Version</span>
+                                    <div class="detail-value">{{ flow_run.flow_version }}</div>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Deployment Version</span>
+                                    <div class="detail-value">{{ flow_run.deployment_version }}</div>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Infrastructure PID</span>
+                                    <div class="detail-value">{{ flow_run.infrastructure_pid }}</div>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Generated On</span>
+                                    <div class="detail-value">{{ macros.datetime.now().strftime('%Y-%m-%d at %H:%M:%S UTC') }}</div>
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+            
+            <!-- Footer -->
+            <tr>
+                <td class="footer-table">
+                    <div class="footer-content">
+                        <div style="font-size: 16px; margin-bottom: 8px;">⚡</div>
+                        <strong>Prefect</strong><br>
+                        Modern workflow orchestration platform<br>
+                        <em>This is an automated notification</em>
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </div>
+</body>
+</html>

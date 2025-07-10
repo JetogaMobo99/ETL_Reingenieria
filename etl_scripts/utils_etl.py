@@ -1,10 +1,16 @@
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+import subprocess
 from jinja2 import Template
 import pandas as pd
 from typing import Union, List, Optional
 import logging
 import os
-
-
+import datetime
+from etl_scripts.db_conf import DatabaseConfig
+from typing import List
 
 def cargar_queries(archivo=None):
     if archivo is None:
@@ -83,6 +89,97 @@ def batch_insert_pyodbc(df, table_name, conn, batch_size=50000, columns=None):
         conn.close()
 
 
+
+def integrity_check(valororigen,valordestino,etl,tablaorigen,tabladestino):
+    """
+    Realiza una verificación de integridad entre los registros obtenidos y los ingresados.
+    """
+    fecha= datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    tipo_validacion = 'Integridad de datos'
+
+    if valororigen == valordestino:
+        resultado = 'OK'
+        diferencia = 0
+        mensaje = f"Integridad de datos OK entre {tablaorigen} y {tabladestino}"
+    else:
+        resultado = 'ERROR'
+        diferencia = abs(valororigen - valordestino)
+        mensaje = f"Integridad de datos fallida entre {tablaorigen} y {tabladestino}: " \
+
+    log= {
+        'fecha_ejecucion': fecha,
+        'nombre_etl': etl,
+        'tipo_validacion':tipo_validacion,
+        'resultado': resultado,
+        'valororigen': valororigen,
+        'valordestino': valordestino,
+        'diferencia': diferencia,
+        'mensaje': mensaje,
+    }
+
+    insert_query = """
+    INSERT INTO MOBODW_STG..stage_quality_log (fecha_ejecucion, nombre_etl, tipo_validacion, resultado, valor_origen, valor_destino, diferencia, mensaje)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """
+    conn = DatabaseConfig.get_conn_sql()
+    cursor = conn.cursor()
+    cursor.execute(insert_query,
+                   log['fecha_ejecucion'],
+                   log['nombre_etl'],
+                   log['tipo_validacion'],
+                   log['resultado'],
+                   log['valororigen'],
+                   log['valordestino'],
+                   log['diferencia'],
+                   log['mensaje'])
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+
+
+def process_table(tables: List[str],type: str):
+
+    if type == 'full':
+        tmsl = {
+            "refresh": {
+                "type": "full",
+                "objects": []
+            }
+        }
+
+        for table in tables:
+            tmsl["refresh"]["objects"].append({
+                "database": "Bi_Mobo_Reingenieria",
+                "table": table
+            })
+        tmsl = str(tmsl).replace("'", '"')
+    elif type == 'partition':
+        
+        tmsl = {
+            "refresh": {
+                "type": "full",
+                "objects": []
+            }
+        }
+
+        for table in tables:
+            tmsl["refresh"]["objects"].append({
+                "database": "Bi_Mobo_Reingenieria",
+                "table": table["name"],
+                "partition": {
+                    "name": table["partition"]  # Cambia esto según tu lógica de partición
+                }
+            })
+
+    cmd = [
+    "powershell.exe",
+    "-ExecutionPolicy", "Bypass",
+    "-Command",
+    f"Invoke-ASCmd -Server '192.168.10.4\\SQLSERVERDEV' -Query '{tmsl}'"
+    ]
+
+    subprocess.run(cmd)
 
 def scd_type1(df_actual: pd.DataFrame, 
               df_nuevo: pd.DataFrame, 
@@ -197,7 +294,6 @@ def scd_type1(df_actual: pd.DataFrame,
             columnas_para_comparar.remove(col)
 
     df_actual_work = df_actual_work[columnas_llave + columnas_para_comparar]
-    df_nuevo_work = df_nuevo_work[columnas_llave + columnas_para_comparar]
 
     # Identificar registros que existen en actual pero no en nuevo (mantener)
     registros_mantener = df_actual_work[
@@ -331,3 +427,7 @@ def scd_type1(df_actual: pd.DataFrame,
 
 
     return pd.DataFrame(registros_nuevos) , pd.DataFrame(registros_actualizados)
+
+
+
+

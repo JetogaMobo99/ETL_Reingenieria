@@ -57,8 +57,8 @@ class DatabaseConfig:
     def get_sql_connection_string(cls):
         """Connection string dinámico"""
         config = cls.get_sql_config()
-        return f"DRIVER={{SQL Server}};SERVER={config['server']};DATABASE={config['database']};UID={config['user']};PWD={config['password']}"
-        # return f"DRIVER={{ODBC Driver 18 for SQL Server}};SERVER={config['server']};DATABASE={config['database']};UID={config['user']};PWD={config['password']};Encrypt=yes;TrustServerCertificate=yes;"
+        # return f"DRIVER={{SQL Server}};SERVER={config['server']};DATABASE={config['database']};UID={config['user']};PWD={config['password']}"
+        return f"DRIVER={{ODBC Driver 18 for SQL Server}};SERVER={config['server']};DATABASE={config['database']};UID={config['user']};PWD={config['password']};Encrypt=yes;TrustServerCertificate=yes;"
 
     @classmethod
     def get_conn_sql(cls):

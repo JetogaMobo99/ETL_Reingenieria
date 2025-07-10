@@ -6,9 +6,10 @@ from etl_scripts.db_conf import DatabaseConfig
 import pandas as pd
 from etl_scripts.utils_etl import *
 from prefect import logging
+from prefect import flow, task
 logger = logging.get_logger()
 
-
+@task
 def get_sql_formas_de_pago():
     """
     Obtiene los datos de formas de pago desde la base de datos SQL Server.
@@ -26,7 +27,7 @@ def get_sql_formas_de_pago():
     return formas_pago_r, formas_pago_stg
 
 
-
+@task
 def get_hana_formas_de_pago():
     logger = logging.get_logger()
 
@@ -37,6 +38,7 @@ def get_hana_formas_de_pago():
     return formas_pago
 
 
+@task
 def get_csv_formas_de_pago():
     file_path = r'\\192.168.10.4\inputFolders\Finanzas\Bancos\formas_pago.csv'
 
@@ -49,6 +51,7 @@ def get_csv_formas_de_pago():
     return formas_pago
 
 
+@task
 def get_csv_formas_de_pago_napse():
     logger = logging.get_logger()
 
@@ -75,7 +78,7 @@ def get_csv_formas_de_pago_napse():
                                            "terminal_cobro"]]
     return formas_pago_napse
 
-
+@task
 def etl_formas_de_pago_stg():
     logger = logging.get_logger()
 
@@ -147,7 +150,7 @@ def etl_formas_de_pago_stg():
     logger.info(f"Insertados {len(merged_formas_pago_final)} registros en dim_formas_de_pago")
 
 
-
+@task
 def etl_formas_de_pago():
     """
     ETL process for formas de pago data.
@@ -202,7 +205,7 @@ def etl_formas_de_pago():
     logger.info("ETL para formas de pago R completado")
 
 
-
+@flow(log_prints=True, flow_run_name="etl_formas_de_pago_stg")
 def main():
     """Main function to execute the ETL process for formas de pago."""
     print("Iniciando ETL para formas de pago")

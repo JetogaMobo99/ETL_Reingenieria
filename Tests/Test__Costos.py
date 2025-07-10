@@ -349,7 +349,7 @@ print("Conectando a SAP HANA para obtener datos de costos...")
 # Process queries one at a time to reduce memory usage
 hanna_historico = pd.read_sql(query_historico, hanna_conn)
 
-hanna_historico["FECHA_COSTO"] = pd.to_datetime(hanna_historico["FECHA_COSTO"], format='%d.%m.%Y').strftime('%Y%m%d')
+hanna_historico["FECHA_COSTO"] = pd.to_datetime(hanna_historico["FECHA_COSTO"], format='%d.%m.%Y').dt.strftime('%Y%m%d')
 
 sql_con = DatabaseConfig.get_conn_sql()
 

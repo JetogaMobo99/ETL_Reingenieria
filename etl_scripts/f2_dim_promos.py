@@ -55,11 +55,15 @@ def etl_dim_promos():
     
 
 
-    nuevos, actualizados = scd_type1(promos_sql, promos_hana, 'codigo_promo', ['cantidad_a', 'cantidad_b', 'cantidad_m','cantidad_n','clasificacion','descripcion','descuento_fijo','monto_minimo','subclasificacion','tipo_promo'])
+    nuevos, actualizados = scd_type1(promos_sql, promos_hana, 'codigo_promo', ['cantidad_a', 'cantidad_b', 'cantidad_m','cantidad_n','clasificacion','descripcion','descuento_fijo','monto_minimo','subclasificacion','tipo_promo'],fecha_actualizacion=False)
 
 
+
+    
     logger.info(f"Nuevos registros: {len(nuevos)}")
     logger.info(f"Registros actualizados: {len(actualizados)}")
+
+    
 
     insert_query = '''
     INSERT INTO MOBODW_R..dim_config_promo (codigo_promo, descripcion, fecha_creacion, fecha_ini, fecha_fin, tipo_promo, cantidad_a, cantidad_b, clasificacion, subclasificacion, monto_minimo, descuento_fijo, sucursales, grupo_a, grupo_b, cantidad_n, cantidad_m)
@@ -103,4 +107,4 @@ def main():
     etl_dim_promos()
     logger.info("ETL para promociones ejecutado con éxito")
 
-    
+main()

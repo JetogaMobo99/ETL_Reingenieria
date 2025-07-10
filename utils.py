@@ -13,7 +13,8 @@ from datetime import datetime
 from typing import Optional, Dict, Any
 from prefect import flow, task, get_run_logger
 from prefect.context import get_run_context
-
+from typing import List
+import subprocess
 load_dotenv(find_dotenv())
 
 # Configuración de email
@@ -295,3 +296,47 @@ def notify_failure(flow_name: str = None, error: str = None, execution_time: str
         execution_time=execution_time,
         custom_message=message
     )
+
+
+def process_table(tables: List[str],type: str):
+
+    if type == 'full':
+        tmsl = {
+            "refresh": {
+                "type": "full",
+                "objects": []
+            }
+        }
+
+        for table in tables:
+            tmsl["refresh"]["objects"].append({
+                "database": "Bi_Mobo_Reingenieria",
+                "table": table
+            })
+        tmsl = str(tmsl).replace("'", '"')
+    elif type == 'partition':
+        
+        tmsl = {
+            "refresh": {
+                "type": "full",
+                "objects": []
+            }
+        }
+
+        for table in tables:
+            tmsl["refresh"]["objects"].append({
+                "database": "Bi_Mobo_Reingenieria",
+                "table": table["name"],
+                "partition": {
+                    "name": table["partition"]  # Cambia esto según tu lógica de partición
+                }
+            })
+
+    cmd = [
+    "powershell.exe",
+    "-ExecutionPolicy", "Bypass",
+    "-Command",
+    f"Invoke-ASCmd -Server '192.168.10.4\\SQLSERVERDEV' -Query '{tmsl}'"
+    ]
+
+    subprocess.run(cmd)
